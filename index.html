@@ -25,42 +25,31 @@ b) Qual é o lado de maior comprimento {1:NUMERICAL:%100%[max(a,b)]} m.
     <button onclick="generateXML()">Generate XML</button>
 
     <script type="text/javascript">
+                
         let pyTemplate = `
-questionText = '''#questionText'''
-vars = []
-v = ""
-for c in questionText:
-    if(c == '['):
-        v = ""    
-    elif(c == ']'):
-        vars += [v]
+_questionText = '''#questionText'''
+_vars = []
+_v = ""
+for _c in _questionText:
+    if(_c == '['):
+        _v = ""    
+    elif(_c == ']'):
+        _vars += [_v]
     else:
-        v += c
-for v in vars:
-    questionText = questionText.replace(f'[{v}]', str(eval(v)))
-        `
-        async function main () {
-            let pyodide = await loadPyodide();        
-            pyodide.runPython(code.getValue() + '\n' + pyTemplate);        
-        }        
-      
-      code = CodeMirror(document.getElementById('py-code'), {
+        _v += _c
+for _v in _vars:
+    _questionText = _questionText.replace(f'[{_v}]', str(eval(_v)))
+        `;
+        let varUnique = 'H8akXe2_1';        
+        pyTemplate = pyTemplate.replaceAll('_', varUnique); 
+        console.log(pyTemplate);
+        
+        code = CodeMirror(document.getElementById('py-code'), {
             lineNumbers: true,
             tabSize: 2,
-            value: 'a=2\nb=3',
+            value: 'from random import *\na = randint(5, 15)\nb = randint(5, 15)',
             mode: 'python'
         });
-
-        async function runPy() {            
-            let questionText = document.getElementById('questionText').value;
-            console.log(questionText);
-            pyTemplate = pyTemplate.replace('#questionText', questionText);
-            let pyodide = await loadPyodide();
-            for (i=0; i<10; i++)        
-                pyodide.runPython(code.getValue() + '\n' + pyTemplate);        
-            let output = pyodide.globals.get('questionText');
-            document.getElementById('output').innerHTML = output;
-        }
 
         async function generateXML () {  
                 
@@ -69,13 +58,14 @@ for v in vars:
             
             let N = parseInt(document.getElementById("numberQuestions").value);
             let questionText = document.getElementById('questionText').value;            
-            pyTemplate = pyTemplate.replace('#questionText', questionText);
+            pyScript = pyTemplate.replace('#questionText', questionText);
             let pyodide = await loadPyodide();
-            for (let i = 1; i <= N; i++) {                
-                let questionExpr = new RegExp("#questionNumber", "g");
-                let tempQuestion = baseQuestion.replace(questionExpr, String(i));
-                pyodide.runPython(code.getValue() + '\n' + pyTemplate);        
-                let questionText = pyodide.globals.get('questionText');
+            for (let i = 1; i <= N; i++) {                                
+                let tempQuestion = baseQuestion.replaceAll("#questionNumber", String(i));
+                pyodide.runPython(code.getValue() + '\n' + pyScript);        
+                let questionText = pyodide.globals.get(varUnique + 'questionText');
+                //let bn = new RegExp("\n", "g");
+                questionText = questionText.replaceAll('\n', '<br>');
                 tempQuestion = tempQuestion.replace('#questionText', questionText);
                 tempQuestion = tempQuestion.replace('#penalty', '0');                
                 xmlText += tempQuestion;
@@ -83,7 +73,7 @@ for v in vars:
             xmlText += '\n\n</quiz>';
 
             let blob = new Blob([xmlText], {type: "text/plain;charset=utf-8"});
-            saveAs(blob, "caliper_moodle.xml");
+            saveAs(blob, "cloze_moodle.xml");
             
         }
     </script>
