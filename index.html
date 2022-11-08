@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+        <script src="https://cdn.jsdelivr.net/pyodide/v0.21.3/full/pyodide.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css"/>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+  </head>
+  <body>
+    <div>
+        <textarea id="questionText" id="" cols="60" rows="10">
+Considere um terreno retangular de [a] m de comprimento por [b] m de largura.
+
+a) Qual é a área do terreno {1:NUMERICAL:%100%[a*b]:[0.1*a*b]#Resposta correta~%50%[a*b]:[a*b*0.2]#Resposta aproximadamente correta} m.
+
+b) Qual é o lado de maior comprimento {1:NUMERICAL:%100%[max(a,b)]} m.
+        </textarea>
+    </div>
+    <div id="py-code"></div>
+    <div>
+        <label for="numberQuestions"><b>Number of random questions (1 - 1000):</b> </label>
+        <input type="number" id="numberQuestions" min="1" max="1000" step="1" value="100" oninput="this.value=this.value.replace(/[^0-9]/g,'');" onchange="this.value=Math.max(this.min, Math.min(this.value, this.max));">
+    </div>
+    <button onclick="generateXML()">Generate XML</button>
+
+    <script type="text/javascript">
+        let pyTemplate = `
+questionText = '''#questionText'''
+vars = []
+v = ""
+for c in questionText:
+    if(c == '['):
+        v = ""    
+    elif(c == ']'):
+        vars += [v]
+    else:
+        v += c
+for v in vars:
+    questionText = questionText.replace(f'[{v}]', str(eval(v)))
+        `
+        async function main () {
+            let pyodide = await loadPyodide();        
+            pyodide.runPython(code.getValue() + '\n' + pyTemplate);        
+        }        
+      
+      code = CodeMirror(document.getElementById('py-code'), {
+            lineNumbers: true,
+            tabSize: 2,
+            value: 'a=2\nb=3',
+            mode: 'python'
+        });
+
+        async function runPy() {            
+            let questionText = document.getElementById('questionText').value;
+            console.log(questionText);
+            pyTemplate = pyTemplate.replace('#questionText', questionText);
+            let pyodide = await loadPyodide();
+            for (i=0; i<10; i++)        
+                pyodide.runPython(code.getValue() + '\n' + pyTemplate);        
+            let output = pyodide.globals.get('questionText');
+            document.getElementById('output').innerHTML = output;
+        }
+
+        async function generateXML () {  
+                
+            let baseQuestion = '\n\n<!-- question: #questionNumber  --><question type="cloze"><name><text>#questionName #questionNumber</text></name><questiontext format="html"><text><![CDATA[#questionText]]></text></questiontext><generalfeedback format="html"><text></text></generalfeedback><defaultgrade>1</defaultgrade><penalty>#penalty</penalty><hidden>0</hidden><idnumber></idnumber></question>';            
+            let xmlText = '<?xml version="1.0" encoding="UTF-8"?><quiz>';
+            
+            let N = parseInt(document.getElementById("numberQuestions").value);
+            let questionText = document.getElementById('questionText').value;            
+            pyTemplate = pyTemplate.replace('#questionText', questionText);
+            let pyodide = await loadPyodide();
+            for (let i = 1; i <= N; i++) {                
+                let questionExpr = new RegExp("#questionNumber", "g");
+                let tempQuestion = baseQuestion.replace(questionExpr, String(i));
+                pyodide.runPython(code.getValue() + '\n' + pyTemplate);        
+                let questionText = pyodide.globals.get('questionText');
+                tempQuestion = tempQuestion.replace('#questionText', questionText);
+                tempQuestion = tempQuestion.replace('#penalty', '0');                
+                xmlText += tempQuestion;
+            }
+            xmlText += '\n\n</quiz>';
+
+            let blob = new Blob([xmlText], {type: "text/plain;charset=utf-8"});
+            saveAs(blob, "caliper_moodle.xml");
+            
+        }
+    </script>
+  </body>
+</html>
