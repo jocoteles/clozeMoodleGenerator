@@ -1,2 +1,3 @@
-**Cloze Moodle Questions Generator**
+Cloze Moodle Questions Generator
 ==============
+[Application page](https://jocoteles.github.io/clozeMoodleGenerator/)
