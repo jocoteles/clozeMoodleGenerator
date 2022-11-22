@@ -4,27 +4,38 @@
         <script src="https://cdn.jsdelivr.net/pyodide/v0.21.3/full/pyodide.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css"/>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/mode/simple.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
   </head>
   <body>
-    <div>
-        <textarea id="questionText" id="" cols="60" rows="10">
-Considere um terreno retangular de [a] m de comprimento por [b] m de largura.
-
-a) Qual é a área do terreno {1:NUMERICAL:%100%[a*b]:[0.1*a*b]#Resposta correta~%50%[a*b]:[a*b*0.2]#Resposta aproximadamente correta} m.
-
-b) Qual é o lado de maior comprimento {1:NUMERICAL:%100%[max(a,b)]} m.
-        </textarea>
-    </div>
-    <div id="py-code"></div>
+    <label for="questionCode">Cloze question text:</label>
+    <div class="w3-panel w3-padding-small" id="questionCode"></div>
+    <label for="pyCode">Python code:</label>
+    <div class="w3-panel w3-padding-small" id="pyCode"></div>
     <div>
         <label for="numberQuestions"><b>Number of random questions (1 - 1000):</b> </label>
         <input type="number" id="numberQuestions" min="1" max="1000" step="1" value="100" oninput="this.value=this.value.replace(/[^0-9]/g,'');" onchange="this.value=Math.max(this.min, Math.min(this.value, this.max));">
     </div>
-    <button onclick="generateXML()">Generate XML</button>
+    <button class="w3-btn w3-indigo" onclick="generateXML()">Generate XML</button>
 
     <script type="text/javascript">
+
+        let questionCodeExample =
+`Considere um terreno retangular de [a] m de profundidade por [b] m de largura.
+
+a) Informe a área do terreno: {1:NUMERICAL:%100%[a*b]:[0.1*a*b]#Resposta correta~%50%[a*b]:[a*b*0.2]#Resposta aproximadamente correta} m².
+
+b) Informe o lado de maior comprimento: {1:NUMERICAL:%100%[max(a,b)]} m.
+`;
+
+        let pyCodeExample = 
+`from random import *
+
+a = randint(5, 15)
+b = randint(5, 15)
+`;
                 
         let pyTemplate = `
 _questionText = '''#questionText'''
@@ -38,18 +49,43 @@ for _c in _questionText:
     else:
         _v += _c
 for _v in _vars:
-    _questionText = _questionText.replace(f'[{_v}]', str(eval(_v)))
-        `;
-        let varUnique = 'H8akXe2_1';        
-        pyTemplate = pyTemplate.replaceAll('_', varUnique); 
-        console.log(pyTemplate);
+    _questionText = _questionText.replace(f'[{_v}]', str(eval(_v)))`;
+        let varUnique = 'H8akXe2_1Mv9';        
+        pyTemplate = pyTemplate.replaceAll('_', varUnique);         
         
-        code = CodeMirror(document.getElementById('py-code'), {
+        //https://codemirror.net/5/demo/simplemode.html
+        CodeMirror.defineSimpleMode("embedCLoze", {        
+            start: [                        
+                {regex: /\[[A-Za-z0-9\W]*?\]/, token: "string"},                
+                {regex: /:(SHORTANSWER|SA|MW|SHORTANSWER_C|SAC|MWC|NUMERICAL|NM|MULTICHOICE|MC|MULTICHOICE_V|MCV|MULTICHOICE_H|MCH|MULTIRESPONSE|MR|MULTIRESPONSE_H|MRH|MULTICHOICE_S|MCS|MULTICHOICE_VS|MCVS|MULTICHOICE_HS|MCHS|MULTIRESPONSE_S|MRS|MULTIRESPONSE_HS|MRHS):/, token: "variable-3"},
+                {regex: /(\%[0-9]*\.?[0-9]*\%|=)/, token: "keyword"},
+                {regex: /\#[^[\~\}\=]*/, token: "comment"},
+                {regex: /[0-9]/, token: "number"}
+            ]
+        });                
+        CodeMirror.defineSimpleMode("simpleCLoze", {        
+            start: [                        
+                {regex: /\[[A-Za-z0-9\W]*?\]/, token: "string"},                
+                {regex: /<[^<>]+>/, token: "atom"},
+                {regex: /\{/, token: "variable-2", mode: {spec: 'embedCLoze', end: /\}/}}
+            ]
+        });
+        
+        questionCode = CodeMirror(document.getElementById('questionCode'), {
             lineNumbers: true,
             tabSize: 2,
-            value: 'from random import *\na = randint(5, 15)\nb = randint(5, 15)',
-            mode: 'python'
+            lineWrapping: true,
+            value: questionCodeExample,
+            mode: 'simpleCLoze'
         });
+                
+        pyCode = CodeMirror(document.getElementById('pyCode'), {
+            lineNumbers: true,
+            tabSize: 2,
+            lineWrapping: true,
+            value: pyCodeExample,
+            mode: 'python'
+        });        
 
         async function generateXML () {  
                 
@@ -57,14 +93,13 @@ for _v in _vars:
             let xmlText = '<?xml version="1.0" encoding="UTF-8"?><quiz>';
             
             let N = parseInt(document.getElementById("numberQuestions").value);
-            let questionText = document.getElementById('questionText').value;            
+            let questionText = questionCode.getValue();            
             pyScript = pyTemplate.replace('#questionText', questionText);
             let pyodide = await loadPyodide();
             for (let i = 1; i <= N; i++) {                                
                 let tempQuestion = baseQuestion.replaceAll("#questionNumber", String(i));
-                pyodide.runPython(code.getValue() + '\n' + pyScript);        
-                let questionText = pyodide.globals.get(varUnique + 'questionText');
-                //let bn = new RegExp("\n", "g");
+                pyodide.runPython(pyCode.getValue() + '\n' + pyScript);        
+                let questionText = pyodide.globals.get(varUnique + 'questionText');                
                 questionText = questionText.replaceAll('\n', '<br>');
                 tempQuestion = tempQuestion.replace('#questionText', questionText);
                 tempQuestion = tempQuestion.replace('#penalty', '0');                
