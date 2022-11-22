@@ -10,15 +10,18 @@
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
   </head>
   <body>
-    <label for="questionCode">Cloze question text:</label>
-    <div class="w3-panel w3-padding-small" id="questionCode"></div>
-    <label for="pyCode">Python code:</label>
-    <div class="w3-panel w3-padding-small" id="pyCode"></div>
-    <div>
-        <label for="numberQuestions"><b>Number of random questions (1 - 1000):</b> </label>
-        <input type="number" id="numberQuestions" min="1" max="1000" step="1" value="100" oninput="this.value=this.value.replace(/[^0-9]/g,'');" onchange="this.value=Math.max(this.min, Math.min(this.value, this.max));">
+    <div class="w3-container">
+        <h3>Cloze question text</h3>
+        <div class="w3-panel w3-card" id="questionCode"></div>
+        <h3>Python code</h3>
+        <div class="w3-panel w3-card" id="pyCode"></div>
+        <div class="w3-container">
+            <h4>Number of random questions (1 - 1000)</h4>
+            <p><input type="number" class="w3-input w3-border" id="numberQuestions" min="1" max="1000" step="1" value="100" oninput="this.value=this.value.replace(/[^0-9]/g,'');" onchange="this.value=Math.max(this.min, Math.min(this.value, this.max));"></p>
+            <p><button class="w3-btn w3-indigo" onclick="generateXML()">Generate XML</button></p>
+        </div>        
+        
     </div>
-    <button class="w3-btn w3-indigo" onclick="generateXML()">Generate XML</button>
 
     <script type="text/javascript">
 
