@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-        <script src="https://cdn.jsdelivr.net/pyodide/v0.21.3/full/pyodide.js"></script>
+        <script src="https://cdn.jsdelivr.net/pyodide/v0.22.0/full/pyodide.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css"/>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script> 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/stex/stex.min.js"></script>       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/mode/simple.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
@@ -16,21 +17,26 @@
         <h3>Python code</h3>
         <div class="w3-panel w3-card" id="pyCode"></div>
         <div class="w3-container">
-            <h4>Number of random questions (1 - 1000)</h4>
-            <p><input type="number" class="w3-input w3-border" id="numberQuestions" min="1" max="1000" step="1" value="100" oninput="this.value=this.value.replace(/[^0-9]/g,'');" onchange="this.value=Math.max(this.min, Math.min(this.value, this.max));"></p>
-            <p><button class="w3-btn w3-indigo" onclick="generateXML()">Generate XML</button></p>
+            <h4>Number of random questions (1 - 1000)</h4>            
+            <div class="w3-cell">
+                <input type="number" class="w3-input w3-border" id="numberQuestions" min="1" max="1000" step="1" value="100" oninput="this.value=this.value.replace(/[^0-9]/g,'');" onchange="this.value=Math.max(this.min, Math.min(this.value, this.max));">
+            </div>
+            <div class="w3-cell">
+                <button class="w3-btn w3-indigo w3-margin-left" onclick="generateXML()">Generate XML</button>
+            </div>            
         </div>        
-        
+        <h3>Rendered</h3>
+        <div class="w3-panel w3-card" id="htmlRendered"></div>
     </div>
 
     <script type="text/javascript">
 
         let questionCodeExample =
-`Considere um terreno retangular de [a] m de profundidade por [b] m de largura.
+`Considere um terreno retangular de [[a]] m de profundidade por [[b]] m de largura.
 
-a) Informe a área do terreno: {1:NUMERICAL:%100%[a*b]:[0.1*a*b]#Resposta correta~%50%[a*b]:[a*b*0.2]#Resposta aproximadamente correta} m².
+a) Informe a área do terreno: {1:NUMERICAL:%100%[[a*b]]:[[0.1*a*b]]#Resposta correta~%50%[[a*b]]:[[a*b*0.2]]#Resposta aproximadamente correta} m².
 
-b) Informe o lado de maior comprimento: {1:NUMERICAL:%100%[max(a,b)]} m.
+b) Informe o lado de maior comprimento: {1:NUMERICAL:%100%[[max(a,b)]]} m.
 `;
 
         let pyCodeExample = 
@@ -52,14 +58,16 @@ for _c in _questionText:
     else:
         _v += _c
 for _v in _vars:
-    _questionText = _questionText.replace(f'[{_v}]', str(eval(_v)))`;
+    _questionText = _questionText.replace(f'[[{_v}]]', str(eval(_v)))`;
         let varUnique = 'H8akXe2_1Mv9';        
         pyTemplate = pyTemplate.replaceAll('_', varUnique);         
         
+        let functions = {};
+
         //https://codemirror.net/5/demo/simplemode.html
         CodeMirror.defineSimpleMode("embedCLoze", {        
             start: [                        
-                {regex: /\[[A-Za-z0-9\W]*?\]/, token: "string"},                
+                {regex: /\[\[[A-Za-z0-9\W]*?\]\]/, token: "string"},                
                 {regex: /:(SHORTANSWER|SA|MW|SHORTANSWER_C|SAC|MWC|NUMERICAL|NM|MULTICHOICE|MC|MULTICHOICE_V|MCV|MULTICHOICE_H|MCH|MULTIRESPONSE|MR|MULTIRESPONSE_H|MRH|MULTICHOICE_S|MCS|MULTICHOICE_VS|MCVS|MULTICHOICE_HS|MCHS|MULTIRESPONSE_S|MRS|MULTIRESPONSE_HS|MRHS):/, token: "variable-3"},
                 {regex: /(\%[0-9]*\.?[0-9]*\%|=)/, token: "keyword"},
                 {regex: /\#[^[\~\}\=]*/, token: "comment"},
@@ -68,9 +76,10 @@ for _v in _vars:
         });                
         CodeMirror.defineSimpleMode("simpleCLoze", {        
             start: [                        
-                {regex: /\[[A-Za-z0-9\W]*?\]/, token: "string"},                
-                {regex: /<[^<>]+>/, token: "atom"},
-                {regex: /\{/, token: "variable-2", mode: {spec: 'embedCLoze', end: /\}/}}
+                {regex: /\[\[[A-Za-z0-9\W]*?\]\]/, token: "string"}, //python expression               
+                {regex: /<[^<>]+>/, token: "atom"},                  //html tags
+                {regex: /\{/, token: "variable-2", mode: {spec: 'embedCLoze', end: /\}/}},
+                {regex: /\(/, token: "variable-2", mode: {spec: 'stex', end: /\)/}}  //LaTeX
             ]
         });
         
@@ -97,8 +106,15 @@ for _v in _vars:
             
             let N = parseInt(document.getElementById("numberQuestions").value);
             let questionText = questionCode.getValue();            
+            //Display the LaTeX tag correctly:
+            questionText = questionText.replaceAll('\\(', '&#92;&#40;');
+            questionText = questionText.replaceAll('\\)', '&#92;&#41;');            
+            //Display the \ symbol inside LaTeX tags:
+            questionText = questionText.replaceAll('\\', '&#92;');            
+
             pyScript = pyTemplate.replace('#questionText', questionText);
             let pyodide = await loadPyodide();
+            await pyodide.loadPackage("numpy");
             for (let i = 1; i <= N; i++) {                                
                 let tempQuestion = baseQuestion.replaceAll("#questionNumber", String(i));
                 pyodide.runPython(pyCode.getValue() + '\n' + pyScript);        
@@ -109,10 +125,31 @@ for _v in _vars:
                 xmlText += tempQuestion;
             }
             xmlText += '\n\n</quiz>';
+            xmlText = xmlText.replaceAll('&#92;', '\\');
+            xmlText = xmlText.replaceAll('&#40;', '\(');
+            xmlText = xmlText.replaceAll('&#41;', '\)');
 
             let blob = new Blob([xmlText], {type: "text/plain;charset=utf-8"});
-            saveAs(blob, "cloze_moodle.xml");
-            
+            saveAs(blob, "cloze_moodle.xml");   
+            renderHTML();
+        }
+
+        async function renderHTML () {
+            let questionText = questionCode.getValue();
+            //Display the LaTeX tag correctly:
+            questionText = questionText.replaceAll('\\(', '&#92;&#40;');
+            questionText = questionText.replaceAll('\\)', '&#92;&#41;');
+            //Display the \ symbol inside LaTeX tags:
+            questionText = questionText.replaceAll('\\', '&#92;');
+
+            pyScript = pyTemplate.replace('#questionText', questionText);
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage("numpy");          
+            pyodide.runPython(pyCode.getValue() + '\n' + pyScript);        
+            html = pyodide.globals.get(varUnique + 'questionText');                
+            html = html.replaceAll('\n', '<br>');
+            html += 
+            document.getElementById('htmlRendered').innerHTML = html
         }
     </script>
   </body>
