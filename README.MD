@@ -11,4 +11,4 @@ By clicking in the Generate XML button, the chosen Number of random questions wi
 
 You can locally save the text and code of both input windows as a single json file by clicking in the Save button. The json file contain two keys, called "cloze" and "python", with the text of the respective windows. In the same way, you can load your saved json file into the application by clicking in the Choose File button.
 
-In order tho check if the application will render the desired cloze questions before saving the many instances to the XML file, you can click at the Render HTML sample.
+In order to check if the application will render the desired cloze questions before saving the many instances to the XML file, you can click at the Render HTML sample.
