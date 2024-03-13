@@ -1,7 +1,7 @@
 Cloze Moodle Questions Generator
 ==============
 
-This is an [online Cloze Moodle Questions Generator](https://jocoteles.github.io/clozeMoodleGenerator/) suitable for generating multiple random instances of a question. The application is composed of two windows.
+This is an [online Cloze Moodle Questions Generator](https://jocoteles.github.io/clozeMoodleGenerator/) suitable for generating multiple random instances of a question using python code. The application is composed of two windows.
 
 In the first window, you enter the Cloze question text of your choice following the Cloze syntaxe as described in the [Embedded Answers (Cloze) question type page](https://docs.moodle.org/403/en/Embedded_Answers_(Cloze)_question_type). But in this application, you can include python variables and operations (using double square brackets) in place of the traditional fixed text or numerical cloze values.
 
